@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 146 100% 21%; /* Verde Institucional Carnet #006B2E */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 48 96% 53%; /* Amarillo Carnet #facc15 */
+    --secondary-foreground: 146 100% 15%;
+    --muted: 140 20% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 48 96% 53%;
+    --accent-foreground: 146 100% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 146 100% 21%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border) / 1);
+  }
+  body {
+    background-color: #f8fafc;
+    color: hsl(var(--foreground) / 1);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Scrollbar personalizada con la paleta institucional */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #006B2E;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #004d21;
+}
