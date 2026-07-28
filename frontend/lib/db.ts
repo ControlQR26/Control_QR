@@ -418,14 +418,10 @@ async function dbConnect() {
     return cached.conn;
   }
 
-  if ((global as any).useMockDb) {
-    return mongoose;
-  }
-
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 5000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
@@ -434,17 +430,7 @@ async function dbConnect() {
     });
   }
 
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    console.warn('MongoDB connection failed. Activating mock JSON database fallback.');
-    (global as any).useMockDb = true;
-    // Pre-initialize mock database file
-    readMockDb();
-    return mongoose;
-  }
-
+  cached.conn = await cached.promise;
   return cached.conn;
 }
 

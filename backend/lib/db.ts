@@ -406,24 +406,14 @@ async function dbConnect() {
     return mongoose;
   }
 
-  if ((global as any).useMockDb) {
-    return mongoose;
-  }
-
-  try {
-    const opts = {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 2000,
-    };
-    await mongoose.connect(MONGODB_URI, opts);
-    console.log('Successfully connected to MongoDB!');
-    return mongoose;
-  } catch (e) {
-    console.warn('MongoDB connection failed. Activating mock JSON database fallback.');
-    (global as any).useMockDb = true;
-    readMockDb();
-    return mongoose;
-  }
+  const opts = {
+    bufferCommands: false,
+    serverSelectionTimeoutMS: 5000,
+  };
+  
+  await mongoose.connect(MONGODB_URI, opts);
+  console.log('Successfully connected to MongoDB!');
+  return mongoose;
 }
 
 export default dbConnect;
