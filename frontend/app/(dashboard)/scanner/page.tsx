@@ -13,63 +13,70 @@ export default function ScannerPage() {
 
   // Cámara activa y ref del scanner
   const [cameraActive, setCameraActive] = useState(false);
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const html5QrCodeRef = useRef<any>(null);
 
   const startCamera = () => {
     setCameraActive(true);
     setScanResult(null);
     setErrorResult(null);
-    toast.success('Inicializando cámara web...');
   };
 
-  const stopCamera = () => {
-    try {
-      if (scannerRef.current) {
-        scannerRef.current.clear();
-        scannerRef.current = null;
+  const stopCamera = async () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      try {
+        await html5QrCodeRef.current.stop();
+      } catch (err) {
+        console.error('Error al detener la cámara:', err);
       }
-    } catch (err) {
-      console.error('Error al limpiar scanner:', err);
     }
     setCameraActive(false);
   };
 
   // Inicializar escáner de html5-qrcode cuando la cámara se activa
   useEffect(() => {
-    if (cameraActive) {
-      const timer = setTimeout(() => {
-        try {
-          const scanner = new Html5QrcodeScanner(
-            "reader",
-            { 
-              fps: 15, 
-              qrbox: { width: 320, height: 320 }, // Cuadro de escaneo amplio
-              rememberLastUsedCamera: true,
-              supportedScanTypes: [0]
-            },
-            /* verbose= */ false
-          );
+    let active = true;
 
-          scanner.render(onScanSuccess, onScanFailure);
-          scannerRef.current = scanner;
+    if (cameraActive) {
+      const initScanner = async () => {
+        try {
+          // Importación dinámica para prevenir problemas con SSR
+          const { Html5Qrcode } = await import('html5-qrcode');
+          if (!active) return;
+
+          const html5QrCode = new Html5Qrcode("reader");
+          html5QrCodeRef.current = html5QrCode;
+
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 280, height: 280 },
+            },
+            (decodedText) => {
+              onScanSuccess(decodedText);
+            },
+            (errorMessage) => {
+              // Fails silently for continuous scanning logs
+            }
+          );
+          
+          toast.success('Cámara web iniciada con éxito');
         } catch (err) {
-          toast.error('Error al inicializar la cámara. Verifique los permisos.');
-          console.error(err);
+          console.error("No se pudo iniciar el escaneo: ", err);
+          toast.error('Error de acceso a la cámara. Asegúrese de dar permisos y usar HTTPS.');
           setCameraActive(false);
         }
-      }, 300);
-
-      return () => {
-        clearTimeout(timer);
-        if (scannerRef.current) {
-          try {
-            scannerRef.current.clear();
-          } catch (e) {
-            console.error(e);
-          }
-        }
       };
+
+      initScanner();
     }
+
+    return () => {
+      active = false;
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(console.error);
+      }
+    };
   }, [cameraActive]);
 
   const onScanSuccess = async (decodedText: string) => {
