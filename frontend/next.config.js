@@ -15,10 +15,11 @@ const nextConfig = {
     serverComponentsExternalPackages: ['bcryptjs']
   },
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
     return [
       {
         source: '/api/:path((?!auth).*)',
-        destination: 'http://localhost:5000/api/:path',
+        destination: `${backendUrl}/:path`,
       },
     ];
   }
