@@ -35,10 +35,10 @@ export async function seedDatabase(req: Request, res: Response) {
     await Notification.deleteMany({});
 
     // Crear Administrador
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const hashedPassword = await bcrypt.hash('admin1234', 10);
     const admin = await User.create({
       name: 'Administrador SENA',
-      email: 'admin@sena.edu.co',
+      email: 'Administrador',
       password: hashedPassword,
       role: 'admin',
     });
