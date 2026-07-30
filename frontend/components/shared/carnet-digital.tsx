@@ -113,7 +113,7 @@ export default function CarnetDigital({ student }: CarnetDigitalProps) {
         <div
           style={{
             position: 'absolute',
-            top: '27%',
+            top: '28.5%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
             width: '75%',
