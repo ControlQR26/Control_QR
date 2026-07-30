@@ -12,8 +12,12 @@ export default function ScannerPage() {
   const [errorResult, setErrorResult] = useState<string | null>(null);
 
   // Cámara activa y ref del scanner
-  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraActive, setCameraActive] = useState(true);
   const html5QrCodeRef = useRef<any>(null);
+  const lastScannedRef = useRef<string>('');
+  const cooldownRef = useRef<boolean>(false);
+  const [cooldown, setCooldown] = useState(false);
+  const COOLDOWN_SECONDS = 5;
 
   const startCamera = () => {
     setCameraActive(true);
@@ -80,7 +84,13 @@ export default function ScannerPage() {
   }, [cameraActive]);
 
   const onScanSuccess = async (decodedText: string) => {
-    stopCamera();
+    // Prevenir escaneos duplicados con cooldown
+    if (cooldownRef.current) return;
+    if (lastScannedRef.current === decodedText) return;
+
+    cooldownRef.current = true;
+    setCooldown(true);
+    lastScannedRef.current = decodedText;
     
     setLoading(true);
     setScanResult(null);
@@ -111,6 +121,12 @@ export default function ScannerPage() {
       toast.error('Error de comunicación.');
     } finally {
       setLoading(false);
+      // Cooldown de N segundos antes de permitir otro escaneo
+      setTimeout(() => {
+        cooldownRef.current = false;
+        setCooldown(false);
+        lastScannedRef.current = '';
+      }, COOLDOWN_SECONDS * 1000);
     }
   };
 
@@ -138,7 +154,14 @@ export default function ScannerPage() {
             {/* Cuadro de Cámara Ampliado (360px de alto mínimo) */}
             <div className="w-full aspect-[4/3] min-h-[360px] bg-gray-900 rounded-xl flex flex-col items-center justify-center text-gray-500 relative overflow-hidden border border-gray-800 shadow-inner">
               {cameraActive ? (
-                <div id="reader" className="absolute inset-0 w-full h-full bg-black"></div>
+                <>
+                  <div id="reader" className="absolute inset-0 w-full h-full bg-black"></div>
+                  {cooldown && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-black/70 text-yellow-400 text-xs font-bold px-4 py-2 rounded-full backdrop-blur-sm">
+                      ⏳ Esperando {COOLDOWN_SECONDS}s para siguiente lectura...
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
                   <QrCode className="h-20 w-20 text-gray-700" />
