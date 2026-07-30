@@ -109,6 +109,34 @@ export default function CarnetDigital({ student }: CarnetDigitalProps) {
           )}
         </div>
 
+        {/* Texto "Colegio la Campiña" en la franja amarilla */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '30.5%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '75%',
+            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'Oswald', sans-serif",
+              fontSize: '14px',
+              fontWeight: 700,
+              color: '#000000',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            Colegio la Campiña
+          </span>
+        </div>
+
         {/* 2. INFORMACIÓN DEL ESTUDIANTE (Nombre, Apellidos y Programa) */}
         <div
           style={{
