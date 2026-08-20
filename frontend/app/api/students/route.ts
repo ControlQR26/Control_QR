@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
   try {
     await dbConnect();
     const body = await req.json();
+
+    if (!body.guardianId || body.guardianId.trim() === '') {
+      delete body.guardianId;
+    }
+
     const student = new Student(body);
     await student.save();
 

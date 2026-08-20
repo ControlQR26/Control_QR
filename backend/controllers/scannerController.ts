@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import dbConnect from '../lib/db';
 import { Student } from '../models/Student';
+import { Guardian } from '../models/Guardian';
+import { Teacher } from '../models/Teacher';
+import { Subject } from '../models/Subject';
 import { Schedule } from '../models/Schedule';
 import { AccessLog } from '../models/AccessLog';
 import { Notification } from '../models/Notification';
@@ -186,14 +189,32 @@ export async function validateScan(req: Request, res: Response) {
 
     const notificationsCreated = [];
 
+    let guardian: any = null;
     if (student.guardianId) {
-      const guardian = student.guardianId as any;
+      if (typeof student.guardianId === 'object' && (student.guardianId as any).nombreCompleto) {
+        guardian = student.guardianId;
+      } else {
+        guardian = await Guardian.findById(student.guardianId);
+      }
+    }
+
+    if (guardian) {
       let msgAcudiente = `Se informa que el estudiante ${student.nombres} ${student.apellidos} ingresó a la institución el día ${dateStr} a las ${timeStr}.`;
       
+      let subjectObj = activeSchedule?.subjectId as any;
+      let teacherObj = activeSchedule?.teacherId as any;
+
       if (activeSchedule) {
-        const subject = activeSchedule.subjectId as any;
-        const teacher = activeSchedule.teacherId as any;
-        msgAcudiente += ` Actualmente tiene programada la materia ${subject.nombre} con el docente ${teacher.nombres} ${teacher.apellidos} en el aula ${aula || 'No asignada'}.`;
+        if (subjectObj && !subjectObj.nombre) {
+          subjectObj = await Subject.findById(activeSchedule.subjectId);
+        }
+        if (teacherObj && !teacherObj.nombres) {
+          teacherObj = await Teacher.findById(activeSchedule.teacherId);
+        }
+
+        const subjectName = subjectObj?.nombre || 'Clase programada';
+        const teacherName = teacherObj ? `${teacherObj.nombres} ${teacherObj.apellidos}` : 'Docente asignado';
+        msgAcudiente += ` Actualmente tiene programada la materia ${subjectName} con el docente ${teacherName} en el aula ${aula || 'No asignada'}.`;
       } else {
         msgAcudiente += ` El ingreso se registró sin clase programada en este horario.`;
       }
@@ -221,30 +242,40 @@ export async function validateScan(req: Request, res: Response) {
     }
 
     if (activeSchedule) {
-      const teacher = activeSchedule.teacherId as any;
-      const subject = activeSchedule.subjectId as any;
-      const msgDocente = `Se ha registrado el ingreso del estudiante ${student.nombres} ${student.apellidos} el día ${dateStr} a las ${timeStr} para la asignatura ${subject.nombre}.`;
-
-      let estadoDocente: 'enviada' | 'simulada' = 'simulada';
-      if (teacher.telegramChatId) {
-        const sent = await sendTelegramMessage(
-          teacher.telegramChatId,
-          `<b>[ControlQR] Ingreso a tu Clase</b>\n\n${msgDocente}`
-        );
-        if (sent) {
-          estadoDocente = 'enviada';
-        }
+      let teacher = activeSchedule.teacherId as any;
+      let subject = activeSchedule.subjectId as any;
+      if (teacher && !teacher.nombres) {
+        teacher = await Teacher.findById(activeSchedule.teacherId);
+      }
+      if (subject && !subject.nombre) {
+        subject = await Subject.findById(activeSchedule.subjectId);
       }
 
-      const notifDocente = await Notification.create({
-        tipoDestinatario: 'docente',
-        destinatario: teacher.telegramChatId ? `Telegram: ${teacher.telegramChatId}` : teacher.correo,
-        mensaje: msgDocente,
-        fecha: ahora,
-        estado: estadoDocente,
-        accessLogId: accessLog._id,
-      });
-      notificationsCreated.push(notifDocente);
+      if (teacher) {
+        const subjectName = subject?.nombre || 'Clase';
+        const msgDocente = `Se ha registrado el ingreso del estudiante ${student.nombres} ${student.apellidos} el día ${dateStr} a las ${timeStr} para la asignatura ${subjectName}.`;
+
+        let estadoDocente: 'enviada' | 'simulada' = 'simulada';
+        if (teacher.telegramChatId) {
+          const sent = await sendTelegramMessage(
+            teacher.telegramChatId,
+            `<b>[ControlQR] Ingreso a tu Clase</b>\n\n${msgDocente}`
+          );
+          if (sent) {
+            estadoDocente = 'enviada';
+          }
+        }
+
+        const notifDocente = await Notification.create({
+          tipoDestinatario: 'docente',
+          destinatario: teacher.telegramChatId ? `Telegram: ${teacher.telegramChatId}` : teacher.correo,
+          mensaje: msgDocente,
+          fecha: ahora,
+          estado: estadoDocente,
+          accessLogId: accessLog._id,
+        });
+        notificationsCreated.push(notifDocente);
+      }
     }
 
     return res.json({

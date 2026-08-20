@@ -25,6 +25,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const body = await req.json();
+
+    if (body.guardianId === '' || body.guardianId === null) {
+      body.guardianId = undefined;
+    }
+
     const needsQRUpdate = 
       (body.codigoEstudiantil && body.codigoEstudiantil !== student.codigoEstudiantil) ||
       (body.numeroDocumento && body.numeroDocumento !== student.numeroDocumento);
