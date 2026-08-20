@@ -13,43 +13,54 @@ import { sendTelegramMessage } from '../lib/telegram';
 process.env.TZ = 'America/Bogota';
 
 /**
- * Obtiene la fecha y hora de Colombia (UTC-5) de forma 100% confiable y universal.
- * Colombia opera permanentemente en UTC-5 (sin horario de verano).
- * Se restan exactamente 5 horas al timestamp universal y se extraen los valores con getUTC*()
- * para garantizar la hora exacta sin importar la configuración del sistema operativo o servidor.
+ * Obtiene la fecha y hora de Colombia (UTC-5) utilizando Intl.DateTimeFormat nativo de Node.js / V8.
+ * Convierte cualquier timestamp UTC a la hora local exacta de Colombia ('America/Bogota').
  */
 function getColombiaDateTime(date: Date = new Date()) {
-  const COLOMBIA_OFFSET_MS = 5 * 60 * 60 * 1000;
-  const colombiaDate = new Date(date.getTime() - COLOMBIA_OFFSET_MS);
+  const timeZone = 'America/Bogota';
 
-  const year = colombiaDate.getUTCFullYear();
-  const month = colombiaDate.getUTCMonth(); // 0-11
-  const day = colombiaDate.getUTCDate();
-  const hours24 = colombiaDate.getUTCHours();
-  const minutes = colombiaDate.getUTCMinutes();
-  const dayOfWeek = colombiaDate.getUTCDay(); // 0=domingo, 1=lunes...
+  const dateStr = new Intl.DateTimeFormat('es-CO', {
+    timeZone,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
 
-  // Formato DD/MM/YYYY
-  const dd = String(day).padStart(2, '0');
-  const mm = String(month + 1).padStart(2, '0');
-  const dateStr = `${dd}/${mm}/${year}`;
+  const timeStr = new Intl.DateTimeFormat('es-CO', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }).format(date).replace(/\s+/g, ' ');
 
-  // Formato 12h: "03:45 p. m."
-  const hours12 = hours24 % 12 || 12;
-  const ampm = hours24 < 12 ? 'a. m.' : 'p. m.';
-  const timeStr = `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+  const horaActualStr = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(date);
 
-  // Formato 24h para comparación de horarios de clase: "15:45"
-  const horaActualStr = `${String(hours24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  const hoyIso = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
 
-  // Formato ISO: "YYYY-MM-DD" para comparación con festivos
-  const hoyIso = `${year}-${mm}-${dd}`;
+  const weekdayStr = new Intl.DateTimeFormat('es-CO', {
+    timeZone,
+    weekday: 'long'
+  }).format(date).toLowerCase();
 
-  // Día de la semana en español
-  const diasSemana: ('domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado')[] = [
-    'domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'
-  ];
-  const diaActualStr = diasSemana[dayOfWeek];
+  let diaActualStr: 'domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado' = 'lunes';
+  if (weekdayStr.includes('domingo')) diaActualStr = 'domingo';
+  else if (weekdayStr.includes('lunes')) diaActualStr = 'lunes';
+  else if (weekdayStr.includes('martes')) diaActualStr = 'martes';
+  else if (weekdayStr.includes('mi')) diaActualStr = 'miércoles';
+  else if (weekdayStr.includes('jueves')) diaActualStr = 'jueves';
+  else if (weekdayStr.includes('viernes')) diaActualStr = 'viernes';
+  else if (weekdayStr.includes('s')) diaActualStr = 'sábado';
+
   const esFinSemana = (diaActualStr === 'domingo' || diaActualStr === 'sábado');
 
   return {
