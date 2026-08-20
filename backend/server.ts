@@ -8,10 +8,6 @@ import dbConnect from './lib/db';
 // Configurar variables de entorno y zona horaria
 process.env.TZ = 'America/Bogota';
 dotenv.config();
-dotenv.config({ path: path.join(__dirname, '../.env.local') });
-dotenv.config({ path: path.join(__dirname, '.env.local') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
