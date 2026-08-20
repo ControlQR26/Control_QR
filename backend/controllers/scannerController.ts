@@ -12,45 +12,46 @@ import { sendTelegramMessage } from '../lib/telegram';
 
 process.env.TZ = 'America/Bogota';
 
+/**
+ * Obtiene la fecha y hora de Colombia (UTC-5) de forma confiable.
+ * NO depende de toLocaleTimeString (que falla en muchos entornos Node.js).
+ * Calcula manualmente el offset UTC-5 para garantizar la hora exacta de Colombia.
+ */
 function getColombiaDateTime(date: Date = new Date()) {
-  const dateStr = date.toLocaleDateString('es-CO', {
-    timeZone: 'America/Bogota',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-
-  const timeStr = date.toLocaleTimeString('es-CO', {
-    timeZone: 'America/Bogota',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-
-  const horaActualStr = date.toLocaleTimeString('en-GB', {
-    timeZone: 'America/Bogota',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-
-  const hoyIso = date.toLocaleDateString('en-CA', {
-    timeZone: 'America/Bogota'
-  });
-
-  const weekdayStr = date.toLocaleDateString('es-CO', {
-    timeZone: 'America/Bogota',
-    weekday: 'long'
-  }).toLowerCase();
-
-  let diaActualStr: 'domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado' = 'lunes';
-  if (weekdayStr.includes('domingo')) diaActualStr = 'domingo';
-  else if (weekdayStr.includes('lunes')) diaActualStr = 'lunes';
-  else if (weekdayStr.includes('martes')) diaActualStr = 'martes';
-  else if (weekdayStr.includes('mi')) diaActualStr = 'miércoles';
-  else if (weekdayStr.includes('jueves')) diaActualStr = 'jueves';
-  else if (weekdayStr.includes('viernes')) diaActualStr = 'viernes';
-  else if (weekdayStr.includes('s')) diaActualStr = 'sábado';
+  // Colombia es UTC-5 constante (sin horario de verano)
+  const COLOMBIA_OFFSET_MS = -5 * 60 * 60 * 1000;
+  
+  // Obtener el timestamp UTC y aplicar el offset de Colombia
+  const utcMs = date.getTime() + (date.getTimezoneOffset() * 60 * 1000);
+  const colombiaDate = new Date(utcMs + COLOMBIA_OFFSET_MS);
+  
+  const year = colombiaDate.getFullYear();
+  const month = colombiaDate.getMonth(); // 0-indexed
+  const day = colombiaDate.getDate();
+  const hours = colombiaDate.getHours();
+  const minutes = colombiaDate.getMinutes();
+  const dayOfWeek = colombiaDate.getDay(); // 0=domingo, 1=lunes, ...
+  
+  // Formato de fecha: DD/MM/YYYY
+  const dd = String(day).padStart(2, '0');
+  const mm = String(month + 1).padStart(2, '0');
+  const dateStr = `${dd}/${mm}/${year}`;
+  
+  // Formato de hora 12h para mensajes: "03:05 p. m."
+  const hours12 = hours % 12 || 12;
+  const ampm = hours < 12 ? 'a.\u00A0m.' : 'p.\u00A0m.';
+  const timeStr = `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+  
+  // Formato de hora 24h para comparación de horarios: "15:05"
+  const horaActualStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  
+  // Formato ISO de fecha: YYYY-MM-DD (para comparar festivos)
+  const hoyIso = `${year}-${mm}-${dd}`;
+  
+  // Día de la semana
+  const diasSemana: ('domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado')[] = 
+    ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const diaActualStr = diasSemana[dayOfWeek];
 
   const esFinSemana = (diaActualStr === 'domingo' || diaActualStr === 'sábado');
 
