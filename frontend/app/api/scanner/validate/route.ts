@@ -10,6 +10,9 @@ import { Notification } from '@/models/Notification';
 import mongoose from 'mongoose';
 import { sendTelegramMessage } from '@/lib/telegram';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 process.env.TZ = 'America/Bogota';
 
 /**
