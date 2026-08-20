@@ -13,54 +13,34 @@ import { sendTelegramMessage } from '../lib/telegram';
 process.env.TZ = 'America/Bogota';
 
 /**
- * Obtiene la fecha y hora de Colombia (UTC-5) utilizando Intl.DateTimeFormat nativo de Node.js / V8.
- * Convierte cualquier timestamp UTC a la hora local exacta de Colombia ('America/Bogota').
+ * Obtiene la fecha y hora de Colombia (UTC-5) de forma pura, determinística e inmune a entornos de servidor.
+ * No depende de bibliotecas ICU, toLocaleTimeString o Intl locales del sistema operativo.
  */
 function getColombiaDateTime(date: Date = new Date()) {
-  const timeZone = 'America/Bogota';
+  const COLOMBIA_OFFSET_MS = 5 * 60 * 60 * 1000;
+  const colDate = new Date(date.getTime() - COLOMBIA_OFFSET_MS);
 
-  const dateStr = new Intl.DateTimeFormat('es-CO', {
-    timeZone,
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  }).format(date);
+  const year = colDate.getUTCFullYear();
+  const month = colDate.getUTCMonth(); // 0-indexed
+  const day = colDate.getUTCDate();
+  const hours24 = colDate.getUTCHours();
+  const minutes = colDate.getUTCMinutes();
+  const dayOfWeek = colDate.getUTCDay(); // 0=domingo, 1=lunes...
 
-  const timeStr = new Intl.DateTimeFormat('es-CO', {
-    timeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  }).format(date).replace(/\s+/g, ' ');
+  const dd = String(day).padStart(2, '0');
+  const mm = String(month + 1).padStart(2, '0');
+  const dateStr = `${dd}/${mm}/${year}`;
 
-  const horaActualStr = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).format(date);
+  const hours12 = hours24 % 12 || 12;
+  const ampm = hours24 < 12 ? 'a. m.' : 'p. m.';
+  const timeStr = `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+  const horaActualStr = `${String(hours24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  const hoyIso = `${year}-${mm}-${dd}`;
 
-  const hoyIso = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(date);
-
-  const weekdayStr = new Intl.DateTimeFormat('es-CO', {
-    timeZone,
-    weekday: 'long'
-  }).format(date).toLowerCase();
-
-  let diaActualStr: 'domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado' = 'lunes';
-  if (weekdayStr.includes('domingo')) diaActualStr = 'domingo';
-  else if (weekdayStr.includes('lunes')) diaActualStr = 'lunes';
-  else if (weekdayStr.includes('martes')) diaActualStr = 'martes';
-  else if (weekdayStr.includes('mi')) diaActualStr = 'miércoles';
-  else if (weekdayStr.includes('jueves')) diaActualStr = 'jueves';
-  else if (weekdayStr.includes('viernes')) diaActualStr = 'viernes';
-  else if (weekdayStr.includes('s')) diaActualStr = 'sábado';
-
+  const diasSemana: ('domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado')[] = [
+    'domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'
+  ];
+  const diaActualStr = diasSemana[dayOfWeek];
   const esFinSemana = (diaActualStr === 'domingo' || diaActualStr === 'sábado');
 
   return {
