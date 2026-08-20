@@ -7,6 +7,8 @@ import { Notification } from '../models/Notification';
 import mongoose from 'mongoose';
 import { sendTelegramMessage } from '../lib/telegram';
 
+process.env.TZ = 'America/Bogota';
+
 function getColombiaDateTime(date: Date = new Date()) {
   const dateStr = date.toLocaleDateString('es-CO', {
     timeZone: 'America/Bogota',

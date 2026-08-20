@@ -5,7 +5,8 @@ import path from 'path';
 import routes from './routes';
 import dbConnect from './lib/db';
 
-// Configurar variables de entorno
+// Configurar variables de entorno y zona horaria
+process.env.TZ = 'America/Bogota';
 dotenv.config();
 dotenv.config({ path: path.join(__dirname, '../.env.local') });
 dotenv.config({ path: path.join(__dirname, '.env.local') });
