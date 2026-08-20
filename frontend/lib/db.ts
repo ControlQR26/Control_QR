@@ -398,9 +398,6 @@ import '@/models/Subject';
 import '@/models/Schedule';
 import '@/models/AccessLog';
 import '@/models/Notification';
-
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sena_id';
-
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -415,8 +412,11 @@ global.mongoose = cached;
 
 async function dbConnect() {
   if (cached.conn) {
+
     return cached.conn;
   }
+
+  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sena_id';
 
   if (!cached.promise) {
     const opts = {
@@ -424,7 +424,7 @@ async function dbConnect() {
       serverSelectionTimeoutMS: 5000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+    cached.promise = mongoose.connect(uri, opts).then((mongooseInstance) => {
       console.log('Successfully connected to MongoDB!');
       return mongooseInstance;
     });
