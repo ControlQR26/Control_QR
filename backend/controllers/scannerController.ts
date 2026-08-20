@@ -76,7 +76,7 @@ function getColombiaDateTime(date: Date = new Date()) {
 export async function validateScan(req: Request, res: Response) {
   try {
     await dbConnect();
-    const { qrData, metodo = 'QR' } = req.body;
+    const { qrData, metodo = 'QR', clientTimeStr, clientDateStr, clientHora24 } = req.body;
 
     if (!qrData) {
       return res.status(400).json({ success: false, error: 'Código QR no recibido.' });
@@ -89,7 +89,7 @@ export async function validateScan(req: Request, res: Response) {
       return res.status(400).json({ success: false, error: 'Formato de QR inválido.' });
     }
 
-    const { studentId, codigoEstudiantil, documento } = parsedQR;
+    const { studentId } = parsedQR;
 
     if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
       return res.status(400).json({ success: false, error: 'Identificador de estudiante inválido en QR.' });
@@ -101,7 +101,11 @@ export async function validateScan(req: Request, res: Response) {
     }
 
     const ahora = new Date();
-    const { dateStr, timeStr, horaActualStr, hoyIso, diaActualStr, esFinSemana } = getColombiaDateTime(ahora);
+    const colombiaInfo = getColombiaDateTime(ahora);
+    const dateStr = clientDateStr || colombiaInfo.dateStr;
+    const timeStr = clientTimeStr || colombiaInfo.timeStr;
+    const horaActualStr = clientHora24 || colombiaInfo.horaActualStr;
+    const { hoyIso, diaActualStr, esFinSemana } = colombiaInfo;
 
     const festivos2026 = [
       '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',

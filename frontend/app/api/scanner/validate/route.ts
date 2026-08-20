@@ -76,7 +76,8 @@ function getColombiaDateTime(date: Date = new Date()) {
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    const { qrData, metodo = 'QR' } = await req.json();
+    const body = await req.json();
+    const { qrData, metodo = 'QR', clientTimeStr, clientDateStr, clientHora24 } = body;
 
     if (!qrData) {
       return NextResponse.json({ success: false, error: 'Código QR no recibido.' }, { status: 400 });
@@ -101,7 +102,11 @@ export async function POST(req: NextRequest) {
     }
 
     const ahora = new Date();
-    const { dateStr, timeStr, horaActualStr, hoyIso, diaActualStr, esFinSemana } = getColombiaDateTime(ahora);
+    const colombiaInfo = getColombiaDateTime(ahora);
+    const dateStr = clientDateStr || colombiaInfo.dateStr;
+    const timeStr = clientTimeStr || colombiaInfo.timeStr;
+    const horaActualStr = clientHora24 || colombiaInfo.horaActualStr;
+    const { hoyIso, diaActualStr, esFinSemana } = colombiaInfo;
 
     const festivos2026 = [
       '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',

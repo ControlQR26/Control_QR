@@ -97,10 +97,38 @@ export default function ScannerPage() {
     setErrorResult(null);
 
     try {
+      const now = new Date();
+      const clientTimeStr = now.toLocaleTimeString('es-CO', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).replace(/\s+/g, ' ');
+
+      const clientDateStr = now.toLocaleDateString('es-CO', {
+        timeZone: 'America/Bogota',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      const clientHora24 = now.toLocaleTimeString('en-GB', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+
       const res = await fetch('/api/scanner/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qrData: decodedText, metodo: 'QR' }),
+        body: JSON.stringify({
+          qrData: decodedText,
+          metodo: 'QR',
+          clientTimeStr,
+          clientDateStr,
+          clientHora24
+        }),
       });
       const data = await res.json();
 
