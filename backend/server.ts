@@ -5,8 +5,12 @@ import path from 'path';
 import routes from './routes';
 import dbConnect from './lib/db';
 
-// Configurar variables de entorno desde el archivo .env principal del proyecto
+// Configurar variables de entorno
+dotenv.config();
 dotenv.config({ path: path.join(__dirname, '../.env.local') });
+dotenv.config({ path: path.join(__dirname, '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), '../.env.local') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -37,6 +41,10 @@ app.get('/', (req, res) => {
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`[ControlQR Backend] Server is running on http://localhost:${PORT}`);
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`[ControlQR Backend] Server is running on http://0.0.0.0:${PORT}`);
 });
+
+// Configuración de timeouts recomendada para Render / Proxies
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 125000;

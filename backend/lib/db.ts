@@ -399,21 +399,21 @@ import '../models/Schedule';
 import '../models/AccessLog';
 import '../models/Notification';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sena_id';
-
 async function dbConnect() {
   if (mongoose.connection.readyState >= 1) {
     return mongoose;
   }
 
+  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sena_id';
   const opts = {
     bufferCommands: false,
     serverSelectionTimeoutMS: 5000,
   };
   
-  await mongoose.connect(MONGODB_URI, opts);
+  await mongoose.connect(uri, opts);
   console.log('Successfully connected to MongoDB!');
   return mongoose;
 }
 
 export default dbConnect;
+
