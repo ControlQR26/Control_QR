@@ -16,6 +16,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
     const updateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleString('es-CO', {
+        timeZone: 'America/Bogota',
         weekday: 'long',
         day: 'numeric',
         month: 'long',

@@ -66,7 +66,7 @@ export default function NotificationsPage() {
                 </span>
                 <span className="text-xs text-gray-400 font-semibold flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" />
-                  {new Date(notif.fecha).toLocaleString('es-CO')}
+                  {new Date(notif.fecha).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
                 </span>
               </div>
 

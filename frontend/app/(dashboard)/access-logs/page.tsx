@@ -104,7 +104,7 @@ export default function AccessLogsPage() {
                       <div className="flex flex-col">
                         <span className="font-semibold text-gray-800 flex items-center gap-1">
                           <CalendarRange className="h-3 w-3 text-gray-400" />
-                          {new Date(log.fecha).toLocaleDateString('es-CO')}
+                          {new Date(log.fecha).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}
                         </span>
                         <span className="flex items-center gap-1 text-[10px]">
                           <Clock className="h-3 w-3 text-gray-400" />

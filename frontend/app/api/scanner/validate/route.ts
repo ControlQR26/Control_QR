@@ -7,12 +7,56 @@ import { Notification } from '@/models/Notification';
 import mongoose from 'mongoose';
 import { sendTelegramMessage } from '@/lib/telegram';
 
-function getFormatTime(date: Date) {
-  return date.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
-}
+function getColombiaDateTime(date: Date = new Date()) {
+  const dateStr = date.toLocaleDateString('es-CO', {
+    timeZone: 'America/Bogota',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
 
-function getFormatDate(date: Date) {
-  return date.toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = date.toLocaleTimeString('es-CO', {
+    timeZone: 'America/Bogota',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  const horaActualStr = date.toLocaleTimeString('en-GB', {
+    timeZone: 'America/Bogota',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  const hoyIso = date.toLocaleDateString('en-CA', {
+    timeZone: 'America/Bogota'
+  });
+
+  const weekdayStr = date.toLocaleDateString('es-CO', {
+    timeZone: 'America/Bogota',
+    weekday: 'long'
+  }).toLowerCase();
+
+  let diaActualStr: 'domingo' | 'lunes' | 'martes' | 'miércoles' | 'jueves' | 'viernes' | 'sábado' = 'lunes';
+  if (weekdayStr.includes('domingo')) diaActualStr = 'domingo';
+  else if (weekdayStr.includes('lunes')) diaActualStr = 'lunes';
+  else if (weekdayStr.includes('martes')) diaActualStr = 'martes';
+  else if (weekdayStr.includes('mi')) diaActualStr = 'miércoles';
+  else if (weekdayStr.includes('jueves')) diaActualStr = 'jueves';
+  else if (weekdayStr.includes('viernes')) diaActualStr = 'viernes';
+  else if (weekdayStr.includes('s')) diaActualStr = 'sábado';
+
+  const esFinSemana = (diaActualStr === 'domingo' || diaActualStr === 'sábado');
+
+  return {
+    dateStr,
+    timeStr,
+    horaActualStr,
+    hoyIso,
+    diaActualStr,
+    esFinSemana
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -43,6 +87,8 @@ export async function POST(req: NextRequest) {
     }
 
     const ahora = new Date();
+    const { dateStr, timeStr, horaActualStr, hoyIso, diaActualStr, esFinSemana } = getColombiaDateTime(ahora);
+
     const festivos2026 = [
       '2026-01-01', '2026-01-12', '2026-03-23', '2026-04-02', '2026-04-03',
       '2026-05-01', '2026-05-18', '2026-06-08', '2026-06-15', '2026-06-29',
@@ -50,14 +96,7 @@ export async function POST(req: NextRequest) {
       '2026-11-02', '2026-11-16', '2026-12-08', '2026-12-25'
     ];
 
-    const hoyIso = ahora.toISOString().split('T')[0];
-    const diaNum = ahora.getDay();
-    const esFinSemana = (diaNum === 0 || diaNum === 6);
     const esFestivo = festivos2026.includes(hoyIso);
-
-    const horas = String(ahora.getHours()).padStart(2, '0');
-    const minutos = String(ahora.getMinutes()).padStart(2, '0');
-    const horaActualStr = `${horas}:${minutos}`;
 
     if (student.estado !== 'activo') {
       await AccessLog.create({
@@ -108,9 +147,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'] as const;
-    const diaActualStr = diasSemana[diaNum];
-
     const activeSchedule = await Schedule.findOne({
       studentId: student._id,
       dia: diaActualStr,
@@ -150,7 +186,7 @@ export async function POST(req: NextRequest) {
 
     if (student.guardianId) {
       const guardian = student.guardianId as any;
-      let msgAcudiente = `Se informa que el estudiante ${student.nombres} ${student.apellidos} ingresó a la institución el día ${getFormatDate(ahora)} a las ${getFormatTime(ahora)}.`;
+      let msgAcudiente = `Se informa que el estudiante ${student.nombres} ${student.apellidos} ingresó a la institución el día ${dateStr} a las ${timeStr}.`;
       
       if (activeSchedule) {
         const subject = activeSchedule.subjectId as any;
@@ -185,7 +221,7 @@ export async function POST(req: NextRequest) {
     if (activeSchedule) {
       const teacher = activeSchedule.teacherId as any;
       const subject = activeSchedule.subjectId as any;
-      const msgDocente = `Se ha registrado el ingreso del estudiante ${student.nombres} ${student.apellidos} el día ${getFormatDate(ahora)} a las ${getFormatTime(ahora)} para la asignatura ${subject.nombre}.`;
+      const msgDocente = `Se ha registrado el ingreso del estudiante ${student.nombres} ${student.apellidos} el día ${dateStr} a las ${timeStr} para la asignatura ${subject.nombre}.`;
 
       let estadoDocente: 'enviada' | 'simulada' = 'simulada';
       if (teacher.telegramChatId) {

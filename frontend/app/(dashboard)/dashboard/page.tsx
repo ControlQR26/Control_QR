@@ -188,7 +188,7 @@ export default function DashboardPage() {
                       {notif.tipoDestinatario}
                     </span>
                     <span className="text-[10px] text-gray-400 font-medium">
-                      {new Date(notif.fecha).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(notif.fecha).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' })}
                     </span>
                   </div>
                   <p className="text-xs text-gray-700 leading-relaxed font-medium">
