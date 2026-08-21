@@ -15,18 +15,23 @@ export default withAuth(
     callbacks: {
       authorized: ({ token }) => !!token,
     },
+    pages: {
+      signIn: '/login',
+    },
+    secret: process.env.NEXTAUTH_SECRET || 'supersecretnextauthkey12345'
   }
 );
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/students/:path*",
-    "/teachers/:path*",
-    "/subjects/:path*",
-    "/schedules/:path*",
-    "/access-logs/:path*",
-    "/notifications/:path*",
-    "/scanner/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - login
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    "/((?!login|api|_next/static|_next/image|favicon.ico).*)"
   ]
 };
