@@ -25,11 +25,13 @@ export async function getDashboardStats(req: Request, res: Response) {
       AccessLog.countDocuments(),
     ]);
 
-    // Ingresos de hoy
-    const hoyInicio = new Date();
-    hoyInicio.setHours(0, 0, 0, 0);
-    const hoyFin = new Date();
-    hoyFin.setHours(23, 59, 59, 999);
+    // Ingresos de hoy en zona horaria Colombia (UTC-5)
+    const colNow = new Date(Date.now() - 5 * 60 * 60 * 1000);
+    const y = colNow.getUTCFullYear();
+    const m = colNow.getUTCMonth();
+    const d = colNow.getUTCDate();
+    const hoyInicio = new Date(Date.UTC(y, m, d, 5, 0, 0, 0));
+    const hoyFin = new Date(Date.UTC(y, m, d + 1, 4, 59, 59, 999));
 
     const logsHoyCount = await AccessLog.countDocuments({
       timestamp: { $gte: hoyInicio, $lte: hoyFin }

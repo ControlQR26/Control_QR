@@ -86,9 +86,11 @@ export async function POST(req: NextRequest) {
 
     const ahora = new Date();
     const colombiaInfo = getColombiaDateTime(ahora);
-    const dateStr = clientDateStr || colombiaInfo.dateStr;
-    const timeStr = clientTimeStr || colombiaInfo.timeStr;
-    const horaActualStr = clientHora24 || colombiaInfo.horaActualStr;
+    
+    // Se asegura el uso prioritario de la hora oficial de Colombia (UTC-5) para evitar desfases de 5 horas
+    const dateStr = colombiaInfo.dateStr;
+    const timeStr = colombiaInfo.timeStr;
+    const horaActualStr = colombiaInfo.horaActualStr;
     const { hoyIso, diaActualStr, esFinSemana } = colombiaInfo;
 
     const festivos2026 = [

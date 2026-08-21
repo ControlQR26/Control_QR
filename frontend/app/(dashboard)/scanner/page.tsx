@@ -98,17 +98,26 @@ export default function ScannerPage() {
 
     try {
       const now = new Date();
-      const hours24 = now.getHours();
-      const minutes = now.getMinutes();
-      const hours12 = hours24 % 12 || 12;
-      const ampm = hours24 < 12 ? 'a. m.' : 'p. m.';
-      const clientTimeStr = `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+      const clientTimeStr = new Intl.DateTimeFormat('es-CO', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(now);
 
-      const day = now.getDate();
-      const month = now.getMonth() + 1;
-      const year = now.getFullYear();
-      const clientDateStr = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
-      const clientHora24 = `${String(hours24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      const clientDateStr = new Intl.DateTimeFormat('es-CO', {
+        timeZone: 'America/Bogota',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }).format(now);
+
+      const clientHora24 = new Intl.DateTimeFormat('es-CO', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(now);
 
       const res = await fetch('/api/scanner/validate', {
         method: 'POST',
