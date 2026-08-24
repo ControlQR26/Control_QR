@@ -59,31 +59,80 @@ export async function validateScan(req: Request, res: Response) {
     const { qrData, metodo = 'QR', clientTimeStr, clientDateStr, clientHora24 } = req.body;
 
     if (!qrData) {
-      return res.status(400).json({ success: false, error: 'Código QR no recibido.' });
+      return res.status(400).json({ success: false, error: 'Código QR o dato de estudiante no recibido.' });
     }
 
-    let parsedQR;
-    try {
-      parsedQR = JSON.parse(qrData);
-    } catch (e) {
-      return res.status(400).json({ success: false, error: 'Formato de QR inválido.' });
+    // 1. Identificación flexible del estudiante (JSON, ObjectId, Código o Documento)
+    let student: any = null;
+    let parsedQR: any = null;
+
+    if (typeof qrData === 'object' && qrData !== null) {
+      parsedQR = qrData;
+    } else if (typeof qrData === 'string') {
+      const trimmed = qrData.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          parsedQR = JSON.parse(trimmed);
+        } catch (e) {
+          // Ignorar error y buscar como texto plano
+        }
+      }
     }
 
-    const { studentId } = parsedQR;
+    if (parsedQR) {
+      const studentId = parsedQR.studentId || parsedQR._id || parsedQR.id;
+      const codigo = parsedQR.codigoEstudiantil || parsedQR.codigo;
+      const doc = parsedQR.documento || parsedQR.numeroDocumento;
 
-    if (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) {
-      return res.status(400).json({ success: false, error: 'Identificador de estudiante inválido en QR.' });
+      if (studentId && mongoose.Types.ObjectId.isValid(studentId)) {
+        student = await Student.findById(studentId).populate('guardianId');
+      }
+      if (!student && codigo) {
+        student = await Student.findOne({
+          codigoEstudiantil: { $regex: new RegExp(`^${String(codigo).trim()}$`, 'i') }
+        }).populate('guardianId');
+      }
+      if (!student && doc) {
+        student = await Student.findOne({
+          numeroDocumento: { $regex: new RegExp(`^${String(doc).trim()}$`, 'i') }
+        }).populate('guardianId');
+      }
     }
 
-    const student = await Student.findById(studentId).populate('guardianId');
+    // Búsqueda directa por texto si no se encontró por JSON
+    if (!student && typeof qrData === 'string') {
+      const rawText = qrData.trim();
+      
+      // Intentar por ObjectId de MongoDB (24 caracteres hexadecimales)
+      if (mongoose.Types.ObjectId.isValid(rawText) && rawText.length === 24) {
+        student = await Student.findById(rawText).populate('guardianId');
+      }
+      
+      // Intentar por Código Estudiantil
+      if (!student) {
+        student = await Student.findOne({
+          codigoEstudiantil: { $regex: new RegExp(`^${rawText}$`, 'i') }
+        }).populate('guardianId');
+      }
+
+      // Intentar por Número de Documento
+      if (!student) {
+        student = await Student.findOne({
+          numeroDocumento: { $regex: new RegExp(`^${rawText}$`, 'i') }
+        }).populate('guardianId');
+      }
+    }
+
     if (!student) {
-      return res.status(404).json({ success: false, error: 'El estudiante no se encuentra registrado en el sistema.' });
+      return res.status(404).json({
+        success: false,
+        error: 'El estudiante no se encuentra registrado en el sistema con el carnet o código presentado.'
+      });
     }
 
     const ahora = new Date();
     const colombiaInfo = getColombiaDateTime(ahora);
     
-    // Se asegura el uso prioritario de la hora oficial de Colombia (UTC-5) para evitar desfases de 5 horas
     const dateStr = colombiaInfo.dateStr;
     const timeStr = colombiaInfo.timeStr;
     const horaActualStr = colombiaInfo.horaActualStr;
@@ -122,31 +171,7 @@ export async function validateScan(req: Request, res: Response) {
       });
     }
 
-    if (esFestivo || esFinSemana) {
-      const motivo = esFestivo ? 'Día Festivo Colombiano' : 'Fin de semana';
-      await AccessLog.create({
-        studentId: student._id,
-        fecha: ahora,
-        hora: horaActualStr,
-        timestamp: ahora,
-        metodo,
-        estado: 'sin clase programada',
-        mensaje: `Intento de ingreso en día no académico/hábil (${motivo}): ${student.nombres} ${student.apellidos}`,
-      });
-
-      return res.json({
-        success: false,
-        status: 'sin clase programada',
-        student: {
-          nombres: student.nombres,
-          apellidos: student.apellidos,
-          codigoEstudiantil: student.codigoEstudiantil,
-          estado: student.estado
-        },
-        error: `Acceso restringido: Hoy es un día no académico o inhábil (${motivo}).`
-      });
-    }
-
+    // 2. Búsqueda de Horario y Docente Activo o Asignado
     const activeSchedule = await Schedule.findOne({
       studentId: student._id,
       dia: diaActualStr,
@@ -160,13 +185,46 @@ export async function validateScan(req: Request, res: Response) {
     let aula = undefined;
     let mensajeLog = `Ingreso exitoso del estudiante ${student.nombres} ${student.apellidos}`;
 
-    if (!activeSchedule) {
-      logEstado = 'sin clase programada';
-      mensajeLog = `Estudiante ${student.nombres} ingresó sin clase programada en este horario.`;
-    } else {
-      subjectId = activeSchedule.subjectId._id;
-      teacherId = activeSchedule.teacherId._id;
+    let assignedTeacher: any = null;
+    let assignedSubject: any = null;
+
+    if (activeSchedule) {
+      subjectId = (activeSchedule.subjectId as any)?._id;
+      teacherId = (activeSchedule.teacherId as any)?._id;
       aula = activeSchedule.aula;
+      assignedTeacher = activeSchedule.teacherId;
+      assignedSubject = activeSchedule.subjectId;
+    } else {
+      logEstado = 'sin clase programada';
+      if (esFestivo || esFinSemana) {
+        const motivo = esFestivo ? 'Día Festivo' : 'Fin de semana';
+        mensajeLog = `Ingreso en día no académico (${motivo}): ${student.nombres} ${student.apellidos}`;
+      } else {
+        mensajeLog = `Estudiante ${student.nombres} ingresó sin clase programada en este horario.`;
+      }
+
+      // Buscar si el estudiante tiene asignado un horario hoy o en su carga académica para notificar al docente
+      const todaySchedule = await Schedule.findOne({
+        studentId: student._id,
+        dia: diaActualStr
+      }).populate('subjectId teacherId');
+
+      if (todaySchedule) {
+        assignedTeacher = todaySchedule.teacherId;
+        assignedSubject = todaySchedule.subjectId;
+        teacherId = (todaySchedule.teacherId as any)?._id;
+        subjectId = (todaySchedule.subjectId as any)?._id;
+      } else {
+        const anySchedule = await Schedule.findOne({
+          studentId: student._id
+        }).populate('subjectId teacherId');
+        if (anySchedule) {
+          assignedTeacher = anySchedule.teacherId;
+          assignedSubject = anySchedule.subjectId;
+          teacherId = (anySchedule.teacherId as any)?._id;
+          subjectId = (anySchedule.subjectId as any)?._id;
+        }
+      }
     }
 
     const accessLog = await AccessLog.create({
@@ -184,6 +242,7 @@ export async function validateScan(req: Request, res: Response) {
 
     const notificationsCreated = [];
 
+    // 3. Notificación al Acudiente (Siempre que exista el acudiente)
     let guardian: any = null;
     if (student.guardianId) {
       if (typeof student.guardianId === 'object' && (student.guardianId as any).nombreCompleto) {
@@ -196,20 +255,30 @@ export async function validateScan(req: Request, res: Response) {
     if (guardian) {
       let msgAcudiente = `Se informa que el estudiante ${student.nombres} ${student.apellidos} ingresó a la institución el día ${dateStr} a las ${timeStr}.`;
       
-      let subjectObj = activeSchedule?.subjectId as any;
-      let teacherObj = activeSchedule?.teacherId as any;
+      let subjectName = '';
+      let teacherName = '';
+
+      if (assignedSubject) {
+        const subObj = typeof assignedSubject === 'object' && assignedSubject.nombre 
+          ? assignedSubject 
+          : await Subject.findById(assignedSubject);
+        subjectName = subObj?.nombre || '';
+      }
+
+      if (assignedTeacher) {
+        const teachObj = typeof assignedTeacher === 'object' && assignedTeacher.nombres 
+          ? assignedTeacher 
+          : await Teacher.findById(assignedTeacher);
+        if (teachObj) {
+          teacherName = `${teachObj.nombres} ${teachObj.apellidos}`;
+        }
+      }
 
       if (activeSchedule) {
-        if (subjectObj && !subjectObj.nombre) {
-          subjectObj = await Subject.findById(activeSchedule.subjectId);
-        }
-        if (teacherObj && !teacherObj.nombres) {
-          teacherObj = await Teacher.findById(activeSchedule.teacherId);
-        }
-
-        const subjectName = subjectObj?.nombre || 'Clase programada';
-        const teacherName = teacherObj ? `${teacherObj.nombres} ${teacherObj.apellidos}` : 'Docente asignado';
-        msgAcudiente += ` Actualmente tiene programada la materia ${subjectName} con el docente ${teacherName} en el aula ${aula || 'No asignada'}.`;
+        msgAcudiente += ` Actualmente tiene programada la materia ${subjectName || 'Clase programada'} con el docente ${teacherName || 'Docente asignado'} en el aula ${aula || 'No asignada'}.`;
+      } else if (esFestivo || esFinSemana) {
+        const motivo = esFestivo ? 'Día Festivo' : 'Fin de semana';
+        msgAcudiente += ` El ingreso se registró en jornada no académica (${motivo}).`;
       } else {
         msgAcudiente += ` El ingreso se registró sin clase programada en este horario.`;
       }
@@ -236,24 +305,27 @@ export async function validateScan(req: Request, res: Response) {
       notificationsCreated.push(notifGuardian);
     }
 
-    if (activeSchedule) {
-      let teacher = activeSchedule.teacherId as any;
-      let subject = activeSchedule.subjectId as any;
-      if (teacher && !teacher.nombres) {
-        teacher = await Teacher.findById(activeSchedule.teacherId);
-      }
-      if (subject && !subject.nombre) {
-        subject = await Subject.findById(activeSchedule.subjectId);
-      }
+    // 4. Notificación al Docente (Si existe docente asignado o en horario)
+    if (assignedTeacher) {
+      let teacherObj = typeof assignedTeacher === 'object' && assignedTeacher.nombres 
+        ? assignedTeacher 
+        : await Teacher.findById(assignedTeacher);
 
-      if (teacher) {
-        const subjectName = subject?.nombre || 'Clase';
+      if (teacherObj) {
+        let subjectName = 'Clase';
+        if (assignedSubject) {
+          const subObj = typeof assignedSubject === 'object' && assignedSubject.nombre 
+            ? assignedSubject 
+            : await Subject.findById(assignedSubject);
+          if (subObj?.nombre) subjectName = subObj.nombre;
+        }
+
         const msgDocente = `Se ha registrado el ingreso del estudiante ${student.nombres} ${student.apellidos} el día ${dateStr} a las ${timeStr} para la asignatura ${subjectName}.`;
 
         let estadoDocente: 'enviada' | 'simulada' = 'simulada';
-        if (teacher.telegramChatId) {
+        if (teacherObj.telegramChatId) {
           const sent = await sendTelegramMessage(
-            teacher.telegramChatId,
+            teacherObj.telegramChatId,
             `<b>[ControlQR] Ingreso a tu Clase</b>\n\n${msgDocente}`
           );
           if (sent) {
@@ -263,7 +335,7 @@ export async function validateScan(req: Request, res: Response) {
 
         const notifDocente = await Notification.create({
           tipoDestinatario: 'docente',
-          destinatario: teacher.telegramChatId ? `Telegram: ${teacher.telegramChatId}` : teacher.correo,
+          destinatario: teacherObj.telegramChatId ? `Telegram: ${teacherObj.telegramChatId}` : teacherObj.correo,
           mensaje: msgDocente,
           fecha: ahora,
           estado: estadoDocente,
@@ -285,8 +357,8 @@ export async function validateScan(req: Request, res: Response) {
         foto: student.foto,
       },
       schedule: activeSchedule ? {
-        subject: (activeSchedule.subjectId as any).nombre,
-        teacher: `${(activeSchedule.teacherId as any).nombres} ${(activeSchedule.teacherId as any).apellidos}`,
+        subject: (activeSchedule.subjectId as any)?.nombre,
+        teacher: `${(activeSchedule.teacherId as any)?.nombres || ''} ${(activeSchedule.teacherId as any)?.apellidos || ''}`.trim(),
         aula: activeSchedule.aula,
         horaInicio: activeSchedule.horaInicio,
         horaFin: activeSchedule.horaFin,
@@ -300,3 +372,4 @@ export async function validateScan(req: Request, res: Response) {
     return res.status(500).json({ success: false, error: error.message });
   }
 }
+

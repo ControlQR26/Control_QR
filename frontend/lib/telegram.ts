@@ -2,9 +2,11 @@
  * Utility function to send Telegram messages via the Telegram Bot API.
  * Uses the TELEGRAM_BOT_TOKEN environment variable.
  */
-export async function sendTelegramMessage(chatId: string, message: string): Promise<boolean> {
-  // Bypass SSL certificate verification for environments with strict local firewall/proxies
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+export async function sendTelegramMessage(chatId: string | number, message: string): Promise<boolean> {
+  // Disable TLS rejection for local proxy/firewall edge cases
+  if (typeof process !== 'undefined' && process.env) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  }
   
   const token = process.env.TELEGRAM_BOT_TOKEN ? process.env.TELEGRAM_BOT_TOKEN.trim() : null;
   if (!token) {
@@ -17,15 +19,19 @@ export async function sendTelegramMessage(chatId: string, message: string): Prom
     return false;
   }
 
-  // Clean chatId to remove accidental whitespace or non-numeric symbols
-  const cleanChatId = chatId.toString().trim();
+  // Clean chatId to remove accidental whitespace or invalid symbols
+  const cleanChatId = String(chatId).trim();
   if (!cleanChatId) {
     console.warn('[Telegram] telegramChatId is empty after cleaning.');
     return false;
   }
 
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
   try {
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    console.log(`[Telegram] Sending message to Chat ID: ${cleanChatId}...`);
+    
+    // First attempt: HTML mode
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -38,31 +44,38 @@ export async function sendTelegramMessage(chatId: string, message: string): Prom
       }),
     });
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      console.error(`[Telegram] API error response for chat ${cleanChatId}:`, errorData);
+    const responseData = await res.json().catch(() => null);
 
-      // Fallback: Retry as plain text if HTML entity parsing fails
-      if (errorData && typeof errorData.description === 'string' && errorData.description.includes("can't parse entities")) {
-        const plainText = message.replace(/<[^>]*>?/gm, '');
-        const retryRes = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: cleanChatId,
-            text: plainText,
-          }),
-        });
-        if (retryRes.ok) {
-          return true;
-        }
-      }
-      return false;
+    if (res.ok && responseData?.ok) {
+      console.log(`[Telegram] ✅ Message sent successfully to Chat ID: ${cleanChatId} (msg_id: ${responseData.result?.message_id})`);
+      return true;
     }
 
-    return true;
-  } catch (error) {
-    console.error(`[Telegram] Network/Fetch error attempting to send to ${cleanChatId}:`, error);
+    // If HTML failed (e.g. entities parse error, or formatting issue), retry as clean plain text
+    const plainText = message.replace(/<[^>]*>?/gm, '').trim();
+    console.warn(`[Telegram] HTML send failed for ${cleanChatId} (${responseData?.description || res.statusText}). Retrying in plain text...`);
+
+    const retryRes = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: cleanChatId,
+        text: plainText,
+      }),
+    });
+
+    const retryData = await retryRes.json().catch(() => null);
+
+    if (retryRes.ok && retryData?.ok) {
+      console.log(`[Telegram] ✅ Plain-text message sent successfully to Chat ID: ${cleanChatId}`);
+      return true;
+    }
+
+    console.error(`[Telegram] ❌ API error response for Chat ID ${cleanChatId}:`, retryData || responseData || { status: retryRes.status });
+    return false;
+  } catch (error: any) {
+    console.error(`[Telegram] ❌ Network/Fetch error attempting to send to ${cleanChatId}:`, error?.message || error);
     return false;
   }
 }
+
