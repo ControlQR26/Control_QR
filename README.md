@@ -151,12 +151,12 @@ El servidor backend se ejecutará en: `http://localhost:5000`
 
 ---
 
-## 🔑 Credenciales de Acceso por Defecto
+## 🔑 Credenciales de Acceso Autorizadas
 
 Para ingresar al panel administrativo en desarrollo:
 
-- **Usuario / Email:** `Administrador` (o `admin@controlqr.edu`)
-- **Contraseña:** `admin123`
+- **Usuario / Email:** `control.admin`
+- **Contraseña:** `Control26++`
 
 ---
 

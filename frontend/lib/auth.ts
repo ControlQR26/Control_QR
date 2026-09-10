@@ -18,13 +18,17 @@ export const authOptions: NextAuthOptions = {
         }
 
         await dbConnect();
-        const inputVal = credentials.email.trim();
+        const inputVal = credentials.email.trim().toLowerCase();
         const enteredPassword = credentials.password;
 
-        // Buscar únicamente el usuario por email/usuario de forma exacta e insensible a mayúsculas
-        const escapedInput = inputVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // RESTRICCIÓN TOTAL: Únicamente 'control.admin' está autorizado.
+        // Cualquier otro usuario (incluyendo 'administrador', 'admin', etc.) queda estrictamente bloqueado.
+        if (inputVal !== 'control.admin') {
+          throw new Error('Usuario o contraseña incorrectos');
+        }
+
         const user = await User.findOne({
-          email: { $regex: new RegExp(`^${escapedInput}$`, 'i') }
+          email: 'control.admin'
         });
 
         if (!user || !user.password) {

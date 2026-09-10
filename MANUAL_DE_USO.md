@@ -176,10 +176,10 @@ El sistema cuenta con un módulo de autenticación protegido mediante **NextAuth
 
 | Campo        | Valor               |
 |-------------|----------------------|
-| **Usuario** | `Administrador`      |
-| **Contraseña** | `admin123`        |
+| **Usuario** | `control.admin`      |
+| **Contraseña** | `Control26++`     |
 
-> También se acepta `admin` como nombre de usuario.
+> **Nota:** Únicamente el usuario autorizado `control.admin` tiene acceso al sistema.
 
 ### Proceso de inicio de sesión
 
@@ -797,7 +797,7 @@ El backend expone una API REST en `http://localhost:5000/api`. Todas las rutas e
 ### ❌ "Error de autenticación al iniciar sesión"
 
 **Soluciones:**
-1. Verifica que estás usando las credenciales correctas: **Administrador** / **admin123**.
+1. Verifica que estás usando las credenciales correctas: **control.admin** / **Control26++**.
 2. Asegúrate de que la variable `NEXTAUTH_SECRET` esté configurada en `.env.local`.
 3. Verifica que el backend esté corriendo en el puerto 5000.
 
