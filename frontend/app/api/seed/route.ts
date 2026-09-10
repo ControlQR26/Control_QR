@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     // Crear Administrador
     const hashedPassword = await bcrypt.hash('Control26++', 10);
     const admin = await User.create({
-      name: 'Administrador ControlQR',
+      name: 'control.admin',
       email: 'control.admin',
       password: hashedPassword,
       role: 'admin',

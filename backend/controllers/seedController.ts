@@ -37,7 +37,7 @@ export async function seedDatabase(req: Request, res: Response) {
     // Crear Administrador
     const hashedPassword = await bcrypt.hash('Control26++', 10);
     const admin = await User.create({
-      name: 'Administrador ControlQR',
+      name: 'control.admin',
       email: 'control.admin',
       password: hashedPassword,
       role: 'admin',

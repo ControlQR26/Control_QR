@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSession } from 'next-auth/react';
 import { Bell, Menu } from 'lucide-react';
@@ -57,14 +57,14 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
 
         <div className="h-8 w-px bg-emerald-100" />
 
-        {/* Perfil del Administrador */}
+        {/* Perfil del {session?.user?.name || session?.user?.email || 'control.admin'} */}
         <div className="flex items-center gap-2 sm:gap-3 bg-emerald-50/60 px-3 py-1.5 rounded-full border border-emerald-100/80">
           <div className="h-8 w-8 rounded-full bg-yellow-400 text-emerald-950 flex items-center justify-center font-black text-sm shadow-xs border border-yellow-300">
-            A
+            {(session?.user?.name || session?.user?.email || 'C')[0].toUpperCase()}
           </div>
           <div className="text-left hidden sm:block pr-1">
             <p className="text-xs sm:text-sm font-extrabold text-emerald-950 leading-none">
-              Administrador
+              {session?.user?.name || session?.user?.email || 'control.admin'}
             </p>
           </div>
         </div>
