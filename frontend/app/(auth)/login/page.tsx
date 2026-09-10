@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -76,7 +76,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-11 block w-full h-12 rounded-xl border border-emerald-200 text-emerald-950 placeholder-emerald-800/40 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 sm:text-sm font-medium bg-emerald-50/30 transition-all"
-                  placeholder="Administrador"
+                  placeholder="control.admin"
                 />
               </div>
             </div>

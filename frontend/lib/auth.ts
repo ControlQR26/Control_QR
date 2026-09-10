@@ -1,4 +1,4 @@
-import NextAuth, { NextAuthOptions } from 'next-auth';
+﻿import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import dbConnect from './db';
 import { User } from '../models/User';
@@ -9,7 +9,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Usuario", type: "text" },
         password: { label: "Contraseña", type: "password" }
       },
       async authorize(credentials) {
@@ -18,50 +18,30 @@ export const authOptions: NextAuthOptions = {
         }
 
         await dbConnect();
-        const inputVal = credentials.email.trim().toLowerCase();
-        
-        // 1. Si es cualquier variación de admin / administrador
-        if (inputVal === 'admin' || inputVal === 'administrador') {
-          let adminUser = await User.findOne({ role: 'admin' });
-          if (!adminUser) {
-            adminUser = {
-              _id: '6a4bc25025c9f7fc60f8ba51',
-              name: 'Administrador',
-              email: 'administrador',
-              role: 'admin'
-            };
-          }
-          return {
-            id: String(adminUser._id),
-            name: adminUser.name || 'Administrador',
-            email: adminUser.email || 'administrador',
-            role: adminUser.role || 'admin',
-          };
-        }
+        const inputVal = credentials.email.trim();
+        const enteredPassword = credentials.password;
 
-        // 2. Buscar por email o por nombre
-        let user = await User.findOne({
-          $or: [
-            { email: inputVal },
-            { name: { $regex: new RegExp(inputVal, 'i') } }
-          ]
+        // Buscar únicamente el usuario por email/usuario de forma exacta e insensible a mayúsculas
+        const escapedInput = inputVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const user = await User.findOne({
+          email: { $regex: new RegExp(`^${escapedInput}$`, 'i') }
         });
 
-        if (!user) {
-          // Si no encuentra por query directo, buscar el primero disponible
-          user = await User.findOne({});
+        if (!user || !user.password) {
+          throw new Error('Usuario o contraseña incorrectos');
         }
 
-        if (user) {
-          return {
-            id: String(user._id || '1'),
-            name: user.name || 'Usuario',
-            email: user.email || 'usuario@sena.edu.co',
-            role: user.role || 'admin',
-          };
+        const isPasswordValid = await bcrypt.compare(enteredPassword, user.password);
+        if (!isPasswordValid) {
+          throw new Error('Usuario o contraseña incorrectos');
         }
 
-        throw new Error('Usuario o contraseña incorrectos');
+        return {
+          id: String(user._id),
+          name: user.name || 'Administrador',
+          email: user.email,
+          role: user.role || 'admin',
+        };
       }
     })
   ],

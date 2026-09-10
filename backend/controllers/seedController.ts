@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import dbConnect from '../lib/db';
 import { User } from '../models/User';
 import { Student } from '../models/Student';
@@ -35,10 +35,10 @@ export async function seedDatabase(req: Request, res: Response) {
     await Notification.deleteMany({});
 
     // Crear Administrador
-    const hashedPassword = await bcrypt.hash('admin1234', 10);
+    const hashedPassword = await bcrypt.hash('Control26++', 10);
     const admin = await User.create({
-      name: 'Administrador SENA',
-      email: 'Administrador',
+      name: 'Administrador ControlQR',
+      email: 'control.admin',
       password: hashedPassword,
       role: 'admin',
     });
@@ -247,7 +247,7 @@ export async function seedDatabase(req: Request, res: Response) {
     return res.json({
       success: true,
       message: 'Base de datos poblada exitosamente con datos semilla.',
-      admin: { email: admin.email, pass: 'admin123' },
+      admin: { email: admin.email, pass: 'Control26++' },
       studentsCount: students.length,
       guardiansCount: 4,
       teachersCount: 2,
