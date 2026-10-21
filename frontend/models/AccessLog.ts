@@ -5,7 +5,7 @@ export interface IAccessLog extends Document {
   fecha: Date;
   hora: string;
   timestamp: Date;
-  metodo: 'QR' | 'Manual' | 'QR_Camara' | 'Manual_Codigo' | 'Archivo_Foto';
+  metodo: string;
   subjectId?: mongoose.Types.ObjectId;
   teacherId?: mongoose.Types.ObjectId;
   aula?: string;
@@ -23,7 +23,6 @@ const AccessLogSchema = new Schema<IAccessLog>(
     timestamp: { type: Date, required: true, default: Date.now },
     metodo: {
       type: String,
-      enum: ['QR', 'Manual', 'QR_Camara', 'Manual_Codigo', 'Archivo_Foto'],
       default: 'QR',
     },
     subjectId: { type: Schema.Types.ObjectId, ref: 'Subject' },
