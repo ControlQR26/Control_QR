@@ -57,6 +57,8 @@ export async function validateScan(req: Request, res: Response) {
   try {
     await dbConnect();
     const { qrData, metodo = 'QR', clientTimeStr, clientDateStr, clientHora24 } = req.body;
+    const VALID_METODOS = ['QR', 'Manual', 'QR_Camara', 'Manual_Codigo', 'Archivo_Foto'];
+    const safeMetodo = VALID_METODOS.includes(metodo) ? metodo : 'QR';
 
     if (!qrData) {
       return res.status(400).json({ success: false, error: 'Código QR o dato de estudiante no recibido.' });
@@ -153,7 +155,7 @@ export async function validateScan(req: Request, res: Response) {
         fecha: ahora,
         hora: horaActualStr,
         timestamp: ahora,
-        metodo,
+        metodo: safeMetodo,
         estado: 'estudiante inactivo',
         mensaje: `Intento de ingreso de estudiante inactivo: ${student.nombres} ${student.apellidos}`,
       });
@@ -232,7 +234,7 @@ export async function validateScan(req: Request, res: Response) {
       fecha: ahora,
       hora: horaActualStr,
       timestamp: ahora,
-      metodo,
+      metodo: safeMetodo,
       subjectId,
       teacherId,
       aula,

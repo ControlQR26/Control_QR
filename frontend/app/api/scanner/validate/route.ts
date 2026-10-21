@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
     await dbConnect();
     const body = await req.json();
     const { qrData, metodo = 'QR', clientTimeStr, clientDateStr, clientHora24 } = body;
+    const VALID_METODOS = ['QR', 'Manual', 'QR_Camara', 'Manual_Codigo', 'Archivo_Foto'];
+    const safeMetodo = VALID_METODOS.includes(metodo) ? metodo : 'QR';
 
     if (!qrData) {
       return NextResponse.json({ success: false, error: 'Código QR o dato de estudiante no recibido.' }, { status: 400 });
@@ -157,7 +159,7 @@ export async function POST(req: NextRequest) {
         fecha: ahora,
         hora: horaActualStr,
         timestamp: ahora,
-        metodo,
+        metodo: safeMetodo,
         estado: 'estudiante inactivo',
         mensaje: `Intento de ingreso de estudiante inactivo: ${student.nombres} ${student.apellidos}`,
       });
@@ -236,7 +238,7 @@ export async function POST(req: NextRequest) {
       fecha: ahora,
       hora: horaActualStr,
       timestamp: ahora,
-      metodo,
+      metodo: safeMetodo,
       subjectId,
       teacherId,
       aula,
